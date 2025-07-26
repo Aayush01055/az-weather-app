@@ -242,3 +242,36 @@ body {
 .location-btn:hover {
   background-color: var(--border-light);
 }
+
+/* Search History */
+.search-history {
+  padding: 0 var(--spacing-xl) var(--spacing-lg);
+}
+
+.search-history h3 {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.history-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.history-item {
+  background-color: var(--bg-light);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.history-item:hover {
+  background-color: var(--border-light);
+}
