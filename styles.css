@@ -485,3 +485,26 @@ body {
   color: var(--text-muted);
   text-transform: capitalize;
 }
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+footer a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+footer a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+footer i {
+  color: #e53e3e;
+}
