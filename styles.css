@@ -508,3 +508,95 @@ footer a:hover {
 footer i {
   color: #e53e3e;
 }
+
+/* Weather theme modifiers */
+.weather-theme-clear {
+  background: var(--sunny-gradient);
+}
+
+.weather-theme-clouds {
+  background: var(--cloudy-gradient);
+}
+
+.weather-theme-rain {
+  background: var(--rainy-gradient);
+}
+
+.weather-theme-snow {
+  background: var(--snowy-gradient);
+}
+
+.weather-theme-thunderstorm {
+  background: var(--thunderstorm-gradient);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-container {
+    padding: var(--spacing-md);
+  }
+
+  .weather-app {
+    border-radius: var(--radius-md);
+  }
+
+  .temperature-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .temperature h1 {
+    font-size: 3rem;
+  }
+
+  .forecast-items {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: var(--spacing-md);
+  }
+
+  .search-container,
+  .search-history {
+    padding: var(--spacing-md);
+  }
+
+  .search-box input {
+    padding: var(--spacing-md);
+    font-size: 0.8rem;
+  }
+
+  .search-btn {
+    width: 30px;
+    height: 30px;
+    margin-left: 0;
+  }
+
+  .location-btn {
+    padding: var(--spacing-md);
+    justify-content: center;
+  }
+
+  .weather-content {
+    padding: 0 var(--spacing-md) var(--spacing-md);
+  }
+
+  .forecast-items {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .location h2 {
+    font-size: 1.5rem;
+  }
+
+  .temperature h1 {
+    font-size: 2.5rem;
+  }
+
+  .weather-details {
+    grid-template-columns: 1fr 1fr;
+  }
+}
