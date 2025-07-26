@@ -49,3 +49,89 @@ function toggleTheme() {
 
   localStorage.setItem("weatherDarkMode", state.isDarkMode);
 }
+
+// Event Listeners
+searchBtn.addEventListener("click", () => {
+  const city = cityInput.value.trim();
+
+  if (city) {
+    getWeather(city);
+  }
+});
+
+cityInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    const city = cityInput.value.trim();
+
+    if (city) {
+      getWeather(city);
+    }
+  }
+});
+
+// Display current weather and forecast
+async function getWeather(city) {
+  showLoading();
+
+  try {
+    // Get current weather
+    const currentWeather = await getCurrentWeather(city);
+
+    // Get forecast using coordinates from current weather
+    const forecastData = await getForecast(
+      currentWeather.coord.lat,
+      currentWeather.coord.lon
+    );
+
+    console.log(currentWeather, forecastData);
+  } catch (error) {
+    showError(error.message || "Failed to fetch weather data");
+  }
+}
+
+// Get current weather data
+async function getCurrentWeather(city) {
+  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${OPEN_WEATHER_API_KEY}&units=metric`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.cod === "404") {
+      throw new Error("City not found");
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Get 5-day forecast data
+async function getForecast(lat, lon) {
+  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPEN_WEATHER_API_KEY}&units=metric`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Show loading indicator
+function showLoading() {
+  loading.style.display = "flex";
+  errorContainer.style.display = "none";
+  weatherData.style.display = "none";
+}
+
+// Show error message
+function showError(message) {
+  loading.style.display = "none";
+  errorContainer.style.display = "flex";
+  weatherData.style.display = "none";
+  errorMessage.textContent = message;
+}
