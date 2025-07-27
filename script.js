@@ -36,6 +36,47 @@ if (state.isDarkMode) {
 }
 
 themeToggle.addEventListener("click", toggleTheme);
+locationBtn.addEventListener("click", getWeatherByLocation);
+
+// Get weather by geolocation
+async function getWeatherByLocation() {
+  showLoading();
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        try {
+          // Get city name from coordinates
+          const response = await fetch(
+            `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${OPEN_WEATHER_API_KEY}`
+          );
+
+          const data = await response.json();
+
+          console.log(data);
+
+          if (data.length > 0) {
+            const city = data[0].name;
+            cityInput.value = city;
+            getWeather(city);
+          } else {
+            throw new Error("Location not found");
+          }
+        } catch (error) {
+          showError(error.message || "Failed to get location");
+        }
+      },
+      () => {
+        showError("Geolocation permission denied. Please search manually.");
+      }
+    );
+  } else {
+    showError("Geolocation not supported by this browser");
+  }
+}
 
 // Toggle dark/light theme
 function toggleTheme() {
