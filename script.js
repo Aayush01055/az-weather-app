@@ -118,6 +118,9 @@ async function getWeather(city) {
     // Get current weather
     const currentWeather = await getCurrentWeather(city);
 
+    // Add to search history
+    addToSearchHistory(currentWeather.name);
+
     // Get forecast using coordinates from current weather
     const forecastData = await getForecast(
       currentWeather.coord.lat,
@@ -129,6 +132,46 @@ async function getWeather(city) {
   } catch (error) {
     showError(error.message || "Failed to fetch weather data");
   }
+}
+
+// Add city to search history
+function addToSearchHistory(city) {
+  // Remove city if it already exists in history
+  state.weatherHistory = state.weatherHistory.filter(
+    (item) => item.toLowerCase() !== city.toLowerCase()
+  );
+
+  // Add city to the beginning of the history array
+  state.weatherHistory.unshift(city);
+
+  // Limit history to 5 items
+  if (state.weatherHistory.length > 5) {
+    state.weatherHistory.pop();
+  }
+
+  // Save to localStorage
+  localStorage.setItem("weatherHistory", JSON.stringify(state.weatherHistory));
+
+  // Update UI
+  updateSearchHistory();
+}
+
+// Update search history UI
+function updateSearchHistory() {
+  historyItems.innerHTML = "";
+
+  state.weatherHistory.forEach((city) => {
+    const historyItem = document.createElement("div");
+    historyItem.className = "history-item";
+    historyItem.textContent = city;
+
+    historyItem.addEventListener("click", () => {
+      cityInput.value = city;
+      getWeather(city);
+    });
+
+    historyItems.appendChild(historyItem);
+  });
 }
 
 // Process and display the weather data
