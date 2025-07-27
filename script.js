@@ -83,10 +83,145 @@ async function getWeather(city) {
       currentWeather.coord.lon
     );
 
-    console.log(currentWeather, forecastData);
+    // Process and display the data
+    displayWeather(currentWeather, forecastData);
   } catch (error) {
     showError(error.message || "Failed to fetch weather data");
   }
+}
+
+// Process and display the weather data
+function displayWeather(currentData, forecastData) {
+  // Display current weather
+  cityName.textContent = `${currentData.name}, ${currentData.sys.country}`;
+  currentDate.textContent = formatDate(currentData.dt);
+  weatherIconMain.innerHTML = getWeatherIcon(currentData.weather[0].id);
+  temperature.textContent = `${Math.round(currentData.main.temp)}°C`;
+  weatherDescription.textContent = currentData.weather[0].description;
+  feelsLike.textContent = `${Math.round(currentData.main.feels_like)}°C`;
+  wind.textContent = `${currentData.wind.speed} m/s`;
+  humidity.textContent = `${currentData.main.humidity}%`;
+  pressure.textContent = `${currentData.main.pressure} hPa`;
+  visibility.textContent = `${(currentData.visibility / 1000).toFixed(1)} km`;
+
+  // Apply weather theme
+  const themeClass = getWeatherTheme(currentData.weather[0].id);
+  const currentWeatherElement = document.querySelector(".current-weather");
+  currentWeatherElement.className = "current-weather";
+
+  if (themeClass) {
+    currentWeatherElement.classList.add(themeClass);
+  }
+
+  // Display 5-day forecast
+  displayForecast(forecastData);
+
+  // Show the weather data section
+  showWeatherData();
+}
+
+// Show weather data
+function showWeatherData() {
+  loading.style.display = "none";
+  errorContainer.style.display = "none";
+  weatherData.style.display = "block";
+}
+
+// Display the 5-day forecast
+function displayForecast(forecastData) {
+  forecastItems.innerHTML = "";
+
+  // Process forecast data (one forecast per day)
+  const dailyForecasts = {};
+
+  forecastData.list.forEach((forecast) => {
+    const date = new Date(forecast.dt * 1000);
+    const day = date.toDateString();
+
+    if (date.getDate() !== new Date().getDate()) {
+      dailyForecasts[day] = forecast;
+    }
+  });
+
+  // Display up to 5 forecasts
+  Object.values(dailyForecasts).forEach((forecast) => {
+    const forecastItem = document.createElement("div");
+    forecastItem.className = "forecast-item";
+
+    const forecastDate = new Date(forecast.dt * 1000);
+    const day = formatDay(forecast.dt);
+    const date = forecastDate.getDate() + "/" + (forecastDate.getMonth() + 1);
+
+    forecastItem.innerHTML = `
+        <div class="forecast-day">${day}</div>
+        <div class="forecast-date">${date}</div>
+        <div class="forecast-icon">${getWeatherIcon(
+          forecast.weather[0].id
+        )}</div>
+        <div class="forecast-temp">${Math.round(forecast.main.temp)}°C</div>
+        <div class="forecast-description">${
+          forecast.weather[0].description
+        }</div>
+      `;
+
+    forecastItems.appendChild(forecastItem);
+  });
+}
+
+// Format day
+function formatDay(timestamp) {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", { weekday: "short" });
+}
+
+// Get weather theme class based on weather condition
+function getWeatherTheme(weatherId) {
+  if (weatherId >= 200 && weatherId < 300) {
+    return "weather-theme-thunderstorm";
+  } else if (weatherId >= 500 && weatherId < 600) {
+    return "weather-theme-rain";
+  } else if (weatherId >= 600 && weatherId < 700) {
+    return "weather-theme-snow";
+  } else if (weatherId === 800) {
+    return "weather-theme-clear";
+  } else if (weatherId > 800) {
+    return "weather-theme-clouds";
+  }
+
+  return "";
+}
+
+// Get weather icon class based on weather condition
+function getWeatherIcon(weatherId) {
+  if (weatherId >= 200 && weatherId < 300) {
+    return '<i class="fas fa-bolt"></i>'; // Thunderstorm
+  } else if (weatherId >= 300 && weatherId < 400) {
+    return '<i class="fas fa-cloud-rain"></i>'; // Drizzle
+  } else if (weatherId >= 500 && weatherId < 600) {
+    return '<i class="fas fa-cloud-showers-heavy"></i>'; // Rain
+  } else if (weatherId >= 600 && weatherId < 700) {
+    return '<i class="fas fa-snowflake"></i>'; // Snow
+  } else if (weatherId >= 700 && weatherId < 800) {
+    return '<i class="fas fa-smog"></i>'; // Atmosphere
+  } else if (weatherId === 800) {
+    return '<i class="fas fa-sun"></i>'; // Clear
+  } else {
+    return '<i class="fas fa-cloud"></i>'; // Clouds
+  }
+}
+
+// Format date
+function formatDate(timestamp) {
+  const date = new Date(timestamp * 1000);
+
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
+
+  return date.toLocaleDateString("en-US", options);
 }
 
 // Get current weather data
