@@ -100,7 +100,6 @@ body {
   background-color: var(--card-bg-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
-  overflow: hidden;
   transition: background-color var(--transition-normal),
     box-shadow var(--transition-normal);
 }
@@ -161,6 +160,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  position: relative;
+  overflow: visible;
 }
 
 .search-box {
@@ -172,6 +173,7 @@ body {
   border: 1px solid var(--border-light);
   transition: border-color var(--transition-fast),
     box-shadow var(--transition-fast);
+  position: relative;
 }
 
 .search-box:focus-within {
@@ -219,6 +221,160 @@ body {
 
 .search-btn:hover {
   background-color: var(--primary-dark);
+}
+
+/* Suggestions Dropdown */
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--card-bg-light);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  display: none;
+  margin-top: var(--spacing-xs);
+  max-height: 320px;
+  overflow: hidden;
+  width: 100%;
+  backdrop-filter: blur(10px);
+}
+
+.suggestions-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xs);
+}
+
+/* Custom Scrollbar */
+.suggestions-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestions-list::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: 3px;
+  margin: 4px;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+  transition: background-color var(--transition-fast);
+}
+
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Firefox scrollbar */
+.suggestions-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) var(--bg-light);
+}
+
+.suggestion-item {
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-height: 65px;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xs);
+  position: relative;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.suggestion-item:hover,
+.suggestion-item.highlighted {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: var(--text-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(83, 114, 240, 0.3);
+  border-color: transparent;
+}
+
+.suggestion-item:hover .suggestion-name,
+.suggestion-item.highlighted .suggestion-name {
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.suggestion-item:hover .suggestion-country,
+.suggestion-item.highlighted .suggestion-country {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.suggestion-name {
+  font-weight: 500;
+  color: var(--text-dark);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.suggestion-item.local-suggestion {
+  border-left: 4px solid var(--primary-color);
+  background: linear-gradient(135deg, rgba(83, 114, 240, 0.08), rgba(108, 142, 255, 0.05));
+  border-color: var(--primary-color);
+}
+
+.suggestion-item.local-suggestion::before {
+  content: "⚡";
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  opacity: 0.7;
+}
+
+.suggestion-item.loading {
+  opacity: 0.8;
+  cursor: default;
+  background: linear-gradient(135deg, var(--bg-light), rgba(83, 114, 240, 0.05));
+  animation: pulse 1.5s infinite;
+  border-color: var(--border-light);
+}
+
+.suggestion-item.loading:hover {
+  background: linear-gradient(135deg, var(--bg-light), rgba(83, 114, 240, 0.05));
+  transform: none;
+  box-shadow: none;
+}
+
+.suggestion-item.no-results {
+  opacity: 0.7;
+  cursor: default;
+  background-color: var(--bg-light);
+  border-color: var(--border-light);
+}
+
+.suggestion-item.no-results:hover {
+  background-color: var(--bg-light);
+  transform: none;
+  box-shadow: none;
+}
+
+.suggestion-country {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
 }
 
 .location-btn {

@@ -4,6 +4,8 @@ import OPEN_WEATHER_API_KEY from "./apiKey.js";
 const cityInput = document.getElementById("city");
 const searchBtn = document.getElementById("search-btn");
 const locationBtn = document.getElementById("location-btn");
+const suggestionsDropdown = document.getElementById("suggestions-dropdown");
+const suggestionsList = document.getElementById("suggestions-list");
 const cityName = document.getElementById("city-name");
 const currentDate = document.getElementById("current-date");
 const weatherIconMain = document.getElementById("weather-icon-main");
@@ -27,7 +29,31 @@ const historyItems = document.getElementById("history-items");
 let state = {
   weatherHistory: JSON.parse(localStorage.getItem("weatherHistory")) || [],
   isDarkMode: localStorage.getItem("weatherDarkMode") === "true",
+  selectedSuggestionIndex: -1,
+  suggestionTimeout: null,
 };
+
+// Common cities for instant suggestions
+const popularCities = [
+  { name: "Los Angeles", state: "California", country: "US" },
+  { name: "New York", state: "New York", country: "US" },
+  { name: "San Francisco", state: "California", country: "US" },
+  { name: "Las Vegas", state: "Nevada", country: "US" },
+  { name: "San Diego", state: "California", country: "US" },
+  { name: "San Antonio", state: "Texas", country: "US" },
+  { name: "New Orleans", state: "Louisiana", country: "US" },
+  { name: "San Jose", state: "California", country: "US" },
+  { name: "Los Vegas", state: "Nevada", country: "US" },
+  { name: "Salt Lake City", state: "Utah", country: "US" },
+  { name: "Buenos Aires", state: "", country: "AR" },
+  { name: "Mexico City", state: "", country: "MX" },
+  { name: "Costa Rica", state: "", country: "CR" },
+  { name: "New Delhi", state: "", country: "IN" },
+  { name: "Hong Kong", state: "", country: "HK" },
+  { name: "Cape Town", state: "", country: "ZA" },
+  { name: "Rio de Janeiro", state: "", country: "BR" },
+  { name: "São Paulo", state: "", country: "BR" }
+];
 
 // Initialize theme
 if (state.isDarkMode) {
@@ -55,8 +81,6 @@ async function getWeatherByLocation() {
           );
 
           const data = await response.json();
-
-          console.log(data);
 
           if (data.length > 0) {
             const city = data[0].name;
@@ -97,18 +121,307 @@ searchBtn.addEventListener("click", () => {
 
   if (city) {
     getWeather(city);
+    hideSuggestions();
   }
 });
 
 cityInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
-    const city = cityInput.value.trim();
-
-    if (city) {
-      getWeather(city);
+    e.preventDefault();
+    
+    if (state.selectedSuggestionIndex >= 0) {
+      // Select the highlighted suggestion from filtered list
+      const suggestions = suggestionsList.querySelectorAll('.suggestion-item:not(.loading):not(.no-results)');
+      if (suggestions[state.selectedSuggestionIndex]) {
+        suggestions[state.selectedSuggestionIndex].click();
+      }
+    } else {
+      // Use the typed value
+      const city = cityInput.value.trim();
+      if (city) {
+        getWeather(city);
+        hideSuggestions();
+      }
     }
   }
 });
+
+// Add keydown event listener for arrow navigation
+cityInput.addEventListener("keydown", (e) => {
+  const suggestions = suggestionsList.querySelectorAll('.suggestion-item:not(.loading):not(.no-results)');
+  
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (suggestions.length > 0) {
+      state.selectedSuggestionIndex = Math.min(state.selectedSuggestionIndex + 1, suggestions.length - 1);
+      updateSuggestionHighlight();
+    }
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (suggestions.length > 0) {
+      state.selectedSuggestionIndex = Math.max(state.selectedSuggestionIndex - 1, -1);
+      updateSuggestionHighlight();
+    }
+  } else if (e.key === "Escape") {
+    hideSuggestions();
+  }
+});
+
+// Add input event listener for suggestions
+cityInput.addEventListener("input", (e) => {
+  const query = e.target.value.trim();
+  
+  // Clear existing timeout
+  if (state.suggestionTimeout) {
+    clearTimeout(state.suggestionTimeout);
+  }
+  
+  if (query.length > 1) {
+    // Show instant local suggestions first
+    const localSuggestions = getInstantSuggestions(query);
+    if (localSuggestions.length > 0) {
+      displaySuggestions(localSuggestions, true); // true indicates local suggestions
+    } else if (query.length > 3) {
+      showLoadingSuggestions();
+    }
+    
+    // Then fetch from API with minimal delay
+    const debounceTime = query.includes(' ') ? 50 : 100; // Even shorter delay
+    state.suggestionTimeout = setTimeout(() => {
+      fetchCitySuggestions(query);
+    }, debounceTime);
+  } else {
+    hideSuggestions();
+  }
+});
+
+// Get instant suggestions from local popular cities list
+function getInstantSuggestions(query) {
+  const lowerQuery = query.toLowerCase();
+  return popularCities.filter(city => 
+    city.name.toLowerCase().startsWith(lowerQuery) ||
+    city.name.toLowerCase().includes(' ' + lowerQuery) ||
+    (lowerQuery.includes(' ') && city.name.toLowerCase().includes(lowerQuery))
+  ).slice(0, 3); // Limit to 3 instant suggestions
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener("click", (e) => {
+  if (!cityInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+    hideSuggestions();
+  }
+});
+
+// Fetch city suggestions from OpenWeather Geocoding API
+async function fetchCitySuggestions(query) {
+  try {
+    // Clean and format the query
+    const cleanQuery = query.trim().replace(/\s+/g, ' ');
+    
+    // For space-separated queries, try multiple approaches simultaneously
+    if (cleanQuery.includes(' ')) {
+      const promises = [
+        // Original space-separated query
+        fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cleanQuery)}&limit=10&appid=${OPEN_WEATHER_API_KEY}`),
+        // Comma-separated query
+        fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cleanQuery.replace(/\s+/g, ','))}&limit=10&appid=${OPEN_WEATHER_API_KEY}`)
+      ];
+      
+      const responses = await Promise.allSettled(promises);
+      let cities = [];
+      
+      // Try to get results from any successful response
+      for (const response of responses) {
+        if (response.status === 'fulfilled' && response.value.ok) {
+          const data = await response.value.json();
+          if (data.length > 0) {
+            cities = data;
+            break;
+          }
+        }
+      }
+      
+      // Remove duplicates within API results
+      cities = removeDuplicateCities(cities);
+      displaySuggestions(cities);
+    } else {
+      // Single word query - use original approach
+      const response = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cleanQuery)}&limit=10&appid=${OPEN_WEATHER_API_KEY}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions');
+      }
+
+      let cities = await response.json();
+      // Remove duplicates within API results
+      cities = removeDuplicateCities(cities);
+      displaySuggestions(cities);
+    }
+  } catch (error) {
+    console.error('Error fetching city suggestions:', error);
+    hideSuggestions();
+  }
+}
+
+// Remove duplicate cities from API results
+function removeDuplicateCities(cities) {
+  const seen = new Set();
+  return cities.filter(city => {
+    // Create a unique key based on city name and country
+    const key = `${city.name.toLowerCase()}-${city.country.toLowerCase()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  }).slice(0, 5); // Limit to 5 results
+}
+
+// Display city suggestions in dropdown
+function displaySuggestions(cities, isLocal = false) {
+  // Don't replace local suggestions with empty API results
+  if (!isLocal && cities.length === 0 && suggestionsList.children.length > 0) {
+    return;
+  }
+  
+  // If this is API results and we already have local suggestions, merge and remove duplicates
+  if (!isLocal && suggestionsList.children.length > 0) {
+    const existingCities = Array.from(suggestionsList.querySelectorAll('.suggestion-name')).map(el => el.textContent.toLowerCase());
+    cities = cities.filter(city => {
+      const cityKey = city.name.toLowerCase();
+      return !existingCities.includes(cityKey);
+    });
+    
+    // If no new cities to add, don't update
+    if (cities.length === 0) {
+      return;
+    }
+    
+    // Add new API results to existing local suggestions
+    cities.forEach((city, index) => {
+      const suggestionItem = document.createElement('div');
+      suggestionItem.className = 'suggestion-item';
+      
+      const cityName = document.createElement('div');
+      cityName.className = 'suggestion-name';
+      cityName.textContent = city.name;
+      
+      const countryName = document.createElement('div');
+      countryName.className = 'suggestion-country';
+      countryName.textContent = `${city.state ? city.state + ', ' : ''}${city.country}`;
+      
+      suggestionItem.appendChild(cityName);
+      suggestionItem.appendChild(countryName);
+      
+      suggestionItem.addEventListener('click', () => {
+        cityInput.value = city.name;
+        getWeather(city.name);
+        hideSuggestions();
+      });
+
+      suggestionItem.addEventListener('mouseenter', () => {
+        const allSuggestions = suggestionsList.querySelectorAll('.suggestion-item:not(.loading):not(.no-results)');
+        state.selectedSuggestionIndex = Array.from(allSuggestions).indexOf(suggestionItem);
+        updateSuggestionHighlight();
+      });
+      
+      suggestionsList.appendChild(suggestionItem);
+    });
+    
+    return;
+  }
+  
+  suggestionsList.innerHTML = '';
+  state.selectedSuggestionIndex = -1;
+
+  if (cities.length === 0) {
+    // Show "No results found" message only if it's not local suggestions
+    if (!isLocal) {
+      const noResultsItem = document.createElement('div');
+      noResultsItem.className = 'suggestion-item no-results';
+      noResultsItem.innerHTML = `
+        <div class="suggestion-name">No cities found</div>
+        <div class="suggestion-country">Try a different spelling or check your input</div>
+      `;
+      suggestionsList.appendChild(noResultsItem);
+      showSuggestions();
+    }
+    return;
+  }
+
+  cities.forEach((city, index) => {
+    const suggestionItem = document.createElement('div');
+    suggestionItem.className = 'suggestion-item';
+    if (isLocal) suggestionItem.classList.add('local-suggestion');
+    
+    const cityName = document.createElement('div');
+    cityName.className = 'suggestion-name';
+    cityName.textContent = city.name;
+    
+    const countryName = document.createElement('div');
+    countryName.className = 'suggestion-country';
+    countryName.textContent = `${city.state ? city.state + ', ' : ''}${city.country}`;
+    
+    suggestionItem.appendChild(cityName);
+    suggestionItem.appendChild(countryName);
+    
+    suggestionItem.addEventListener('click', () => {
+      cityInput.value = city.name;
+      getWeather(city.name);
+      hideSuggestions();
+    });
+
+    suggestionItem.addEventListener('mouseenter', () => {
+      state.selectedSuggestionIndex = index;
+      updateSuggestionHighlight();
+    });
+    
+    suggestionsList.appendChild(suggestionItem);
+  });
+
+  showSuggestions();
+}
+
+// Update suggestion highlighting
+function updateSuggestionHighlight() {
+  const suggestions = suggestionsList.querySelectorAll('.suggestion-item:not(.loading):not(.no-results)');
+  
+  suggestions.forEach((item, index) => {
+    if (index === state.selectedSuggestionIndex) {
+      item.classList.add('highlighted');
+    } else {
+      item.classList.remove('highlighted');
+    }
+  });
+}
+
+// Show loading indicator for suggestions
+function showLoadingSuggestions() {
+  suggestionsList.innerHTML = '';
+  const loadingItem = document.createElement('div');
+  loadingItem.className = 'suggestion-item loading';
+  loadingItem.innerHTML = `
+    <div class="suggestion-name">Searching cities...</div>
+    <div class="suggestion-country">Please wait</div>
+  `;
+  suggestionsList.appendChild(loadingItem);
+  showSuggestions();
+}
+
+// Show suggestions dropdown
+function showSuggestions() {
+  if (suggestionsDropdown) {
+    suggestionsDropdown.style.display = 'block';
+  }
+}
+
+// Hide suggestions dropdown
+function hideSuggestions() {
+  suggestionsDropdown.style.display = 'none';
+  state.selectedSuggestionIndex = -1;
+}
 
 // Display current weather and forecast
 async function getWeather(city) {
